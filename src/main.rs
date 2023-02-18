@@ -1,6 +1,11 @@
-use std::time::Instant;
+use std::{
+    fs::File,
+    io::{self, BufRead},
+    path::Path,
+    time::Instant,
+};
 
-use evaluate::pattern_to_equation;
+use evaluate::{evaluate, pattern_to_equation};
 
 mod evaluate;
 mod generator;
@@ -22,8 +27,31 @@ fn main() {
     let scope = &mut v8::ContextScope::new(handle_scope, context);
 
     let evaluate_time = Instant::now();
-    for code in pattern_to_equation("(22*x)*2").iter() {
-        evaluate::evaluate(scope, code);
+    let mut db = Vec::new();
+
+    if let Ok(lines) = read_lines("patterns.txt") {
+        for line in lines {
+            if let Ok(pattern) = line {
+                db.push(pattern);
+            }
+        }
     }
+    println!("{}", db.len());
+
+    // split db into chunks and sen
+    for pattern in db {
+        for code in pattern_to_equation(&pattern).iter() {
+            evaluate(scope, code);
+        }
+    }
+
     println!("Evaluated in: {:.2?} ", evaluate_time.elapsed());
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where
+    P: AsRef<Path>,
+{
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
 }

@@ -11,10 +11,10 @@ const TWO_ARG_OPERATOR: char = '*'; // 0+1, 0-1, 0*1, 0/1, 0**1, 0%1, 0&&1, 0&1,
 const LEFT_PARENS: char = '(';
 const RIGHT_PARENS: char = ')';
 const PATTERNS_TXT_PATH: &str = "./patterns.txt";
-const PATTERN_CHARS: [char; 7] = [
+const PATTERN_CHARS: [char; 6] = [
     VAR,
     CONST,
-    CHANGE,
+    // CHANGE,
     RIGHT_ARG_OPERATOR,
     TWO_ARG_OPERATOR,
     LEFT_PARENS,

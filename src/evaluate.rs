@@ -44,6 +44,8 @@ function print(a) {
   }
 }
 
+try {
+
 ";
 
 pub fn evaluate(scope: &mut ContextScope<HandleScope>, pattern: &str) {
@@ -52,8 +54,9 @@ pub fn evaluate(scope: &mut ContextScope<HandleScope>, pattern: &str) {
     }
 
     for function in TEST_CODES {
-        let js_code = JS_EVAL.to_owned() + &function(pattern) + "; results;";
-
+        let js_code =
+            JS_EVAL.to_owned() + &function(pattern) + "; results; } catch(e) { console.error(e) }";
+        println!("Evaluating: {}", &function(pattern));
         let code = v8::String::new(scope, &js_code).unwrap();
         let script = v8::Script::compile(scope, code, None).unwrap();
         let result = script.run(scope).unwrap();
@@ -84,7 +87,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
     let char_map: HashMap<char, Vec<char>> = [
         ('x', vec!['i']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
-        ('i', vec!['+', '+', '-', '-']),
+        // ('i', vec!['+', '+', '-', '-']),
         ('~', vec!['~', '!', '-']),
         ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
