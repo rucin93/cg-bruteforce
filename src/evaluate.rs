@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Instant};
+use std::collections::HashMap;
 
 use v8::{ContextScope, HandleScope};
 
@@ -31,10 +31,10 @@ const TEST_CODES: [fn(&str) -> String; 8] = [
 ];
 
 const JS_EVAL: &str = "
-const results = new Array(100)
-let i = 0
-let enoughResults = false
-let safeBreak = 0
+results = []
+i = 0
+enoughResults = false
+safeBreak = 0
 
 function print(a) {
   if (results.length < 100) {
@@ -46,21 +46,39 @@ function print(a) {
 
 ";
 
-pub fn evaluate(scope: &mut ContextScope<HandleScope>) {
-    let timer = Instant::now();
+pub fn evaluate(scope: &mut ContextScope<HandleScope>, pattern: &str) {
+    if !check_code(pattern) {
+        return;
+    }
 
-    let code = v8::String::new(scope, "'Hello' + ' World!'").unwrap();
-    let script = v8::Script::compile(scope, code, None).unwrap();
-    let result = script.run(scope).unwrap();
-    let result = result.to_string(scope).unwrap();
+    for function in TEST_CODES {
+        let js_code = JS_EVAL.to_owned() + &function(pattern) + "; results;";
 
-    println!("{}", result.to_rust_string_lossy(scope));
-    println!("Evaluated in: {:.2?} ", timer.elapsed());
+        let code = v8::String::new(scope, &js_code).unwrap();
+        let script = v8::Script::compile(scope, code, None).unwrap();
+        let result = script.run(scope).unwrap();
+        let result = result.to_string(scope).unwrap();
+
+        for (_i, solution) in SOLUTIONS.iter().enumerate() {
+            if result.to_rust_string_lossy(scope).starts_with(solution.1) {
+                println!("Found solution: {} {}", solution.0, function(pattern));
+                return;
+            }
+        }
+
+        // println!(
+        //     "Evaluating: {}\n{}",
+        //     pattern,
+        //     result.to_rust_string_lossy(scope)
+        // );
+    }
 }
 
-pub fn pattern_to_equation(pattern: &str) {
+pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
+    let mut equations = Vec::new();
+
     if pattern.is_empty() {
-        return;
+        return equations;
     }
 
     let char_map: HashMap<char, Vec<char>> = [
@@ -68,10 +86,7 @@ pub fn pattern_to_equation(pattern: &str) {
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
         ('i', vec!['+', '+', '-', '-']),
         ('~', vec!['~', '!', '-']),
-        (
-            '*',
-            vec!['+', '-', '*', '/', '%', '&', '|', '>', '<', '>', '^'],
-        ),
+        ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
         (')', vec![')']),
     ]
@@ -112,9 +127,10 @@ pub fn pattern_to_equation(pattern: &str) {
             })
             .collect::<String>();
 
-        // callback(&equation);
-        println!("{}", equation);
+        equations.push(equation);
     }
+
+    return equations;
 }
 
 fn check_code(code: &str) -> bool {

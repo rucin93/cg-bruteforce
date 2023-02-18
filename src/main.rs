@@ -21,7 +21,9 @@ fn main() {
     let context = v8::Context::new(handle_scope);
     let scope = &mut v8::ContextScope::new(handle_scope, context);
 
-    evaluate::evaluate(scope);
-
-    pattern_to_equation("2*x");
+    let evaluate_time = Instant::now();
+    for code in pattern_to_equation("(22*x)*2").iter() {
+        evaluate::evaluate(scope, code);
+    }
+    println!("Evaluated in: {:.2?} ", evaluate_time.elapsed());
 }
