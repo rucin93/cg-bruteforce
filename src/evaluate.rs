@@ -17,7 +17,7 @@ const SOLUTIONS: [(&str, &str); 12] = [
     ("van-eck", "0,0,1,0,2,0,2,2,1,6,0,5,0,2,6,5,4,0,5,3,0,3,2,9,0,4,9,3,6,14,0,6,3,5,15,0,5,3,5,2,17,0,6,11,0,3,8,0"),
 ];
 
-const STOP_STRING: &str = ",(safeBreak++ < 100)";
+const STOP_STRING: &str = ",(safeBreak++ < 50)";
 
 const TEST_CODES: [fn(&str) -> String; 8] = [
     |code| format!("for(i=0;i++{};)print({})", STOP_STRING, code),
@@ -37,7 +37,7 @@ enoughResults = false
 safeBreak = 0
 
 function print(a) {
-  if (results.length < 100) {
+  if (results.length < 50) {
     results.push(a)
   } else {
     enoughResults = true
@@ -54,9 +54,16 @@ pub fn evaluate(scope: &mut ContextScope<HandleScope>, pattern: &str) {
     }
 
     for function in TEST_CODES {
-        let js_code =
-            JS_EVAL.to_owned() + &function(pattern) + "; results; } catch(e) { console.error(e) }";
-        println!("Evaluating: {}", &function(pattern));
+        let js_code = JS_EVAL.to_owned()
+            + &function(pattern)
+            + "; results; } catch(e) {
+               console.error(e) 
+               results = []
+               i = 0
+               enoughResults = false
+               safeBreak = 0
+              }";
+        // println!("Evaluating: {}", &function(pattern));
         let code = v8::String::new(scope, &js_code).unwrap();
         let script = v8::Script::compile(scope, code, None).unwrap();
         let result = script.run(scope).unwrap();
@@ -88,7 +95,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
         ('x', vec!['i']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
         // ('i', vec!['+', '+', '-', '-']),
-        ('~', vec!['~', '!', '-']),
+        ('~', vec!['~', '!']),
         ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
         (')', vec![')']),
