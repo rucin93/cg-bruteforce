@@ -12,7 +12,7 @@ mod evaluate;
 mod generator;
 
 fn main() {
-    let generate = true;
+    let generate = false;
     if generate {
         let timer = Instant::now();
         generator::generate_patterns(10, 10);
@@ -55,7 +55,9 @@ fn main() {
                 println!("{:?} - pattern: {}", thread_id, pattern);
                 for code in pattern_to_equation(&pattern).iter() {
                     let ev = evaluate(code);
-                    tx.send(ev).unwrap();
+                    if ev != "" {
+                        tx.send(ev).unwrap();
+                    }
                 }
             }
         });
