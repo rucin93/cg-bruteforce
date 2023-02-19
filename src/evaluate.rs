@@ -47,9 +47,9 @@ function print(a) {
 
 ";
 
-pub fn evaluate(pattern: &str) -> String {
+pub fn evaluate(pattern: &str) -> (String, String) {
     if !check_code(pattern) {
-        return "".to_string();
+        return ("".to_string(), "".to_string());
     }
 
     let context = Context::new().unwrap();
@@ -65,14 +65,13 @@ pub fn evaluate(pattern: &str) -> String {
         let result = result.as_str().unwrap();
         for (_i, solution) in SOLUTIONS.iter().enumerate() {
             if result.starts_with(solution.1) {
-                println!("Found solution: {} {}", solution.0, function(pattern));
-                return format!("Found solution: {} {}", solution.0, function(pattern));
+                return (solution.0.to_string(), function(pattern));
             }
         }
     }
 
     drop(context);
-    return "".to_string();
+    return ("".to_string(), "".to_string());
 }
 
 pub fn pattern_to_equation(pattern: &str) -> Vec<String> {

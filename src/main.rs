@@ -45,25 +45,35 @@ fn main() {
         .unwrap();
     let evaluate_time = Instant::now();
     let (tx, rx) = std::sync::mpsc::channel();
+    let unique_keys: Arc<std::sync::Mutex<std::collections::HashSet<String>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
 
     for chunk in db.chunks(db.len() / num_cpus::get()) {
         let tx = tx.clone();
         let chunk = Arc::new(chunk.to_vec());
+        let unique_keys = unique_keys.clone();
         pool.spawn(move || {
             let thread_id = std::thread::current().id();
             for pattern in chunk.to_vec() {
                 println!("{:?} - pattern: {}", thread_id, pattern);
                 for code in pattern_to_equation(&pattern).iter() {
                     let ev = evaluate(code);
-                    if ev != "" {
-                        tx.send(ev).unwrap();
+                    if !ev.0.is_empty() {
+                        println!("{:?} - Found solution: {} {}", thread_id, ev.0, ev.1);
+                        if !unique_keys.lock().unwrap().contains(&ev.0.clone()) {
+                            unique_keys.lock().unwrap().insert(ev.0.clone());
+                            tx.send(ev).unwrap();
+                        }
+
+                        println!("Found solutions for: {:?}", unique_keys.lock().unwrap());
                     }
                 }
             }
         });
     }
     drop(tx);
-    let results: Vec<String> = rx.into_iter().filter(|x| !x.is_empty()).collect();
+    let results: Vec<(String, String)> = rx.into_iter().collect();
+
     println!("Results: {:?}", results);
     println!("Evaluated in: {:.2?} ", evaluate_time.elapsed());
 }
