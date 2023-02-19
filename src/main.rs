@@ -3,12 +3,10 @@ use std::{
     io::{self, BufRead},
     path::Path,
     sync::Arc,
-    sync::Mutex,
     time::Instant,
 };
 
 use evaluate::{evaluate, pattern_to_equation};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 mod evaluate;
 mod generator;
@@ -46,23 +44,25 @@ fn main() {
         .build()
         .unwrap();
     let evaluate_time = Instant::now();
-    pool.install(|| {
-        // counter to be shared between threads
-        let counter = Arc::new(Mutex::new(0));
+    let (tx, rx) = std::sync::mpsc::channel();
 
-        db.par_iter().for_each(|pattern| {
-            // increment counter
-            let mut counter = counter.lock().unwrap();
+    for chunk in db.chunks(db.len() / num_cpus::get()) {
+        let tx = tx.clone();
+        let chunk = Arc::new(chunk.to_vec());
+        pool.spawn(move || {
             let thread_id = std::thread::current().id();
-            // println!("{:?} - pattern: {}", thread_id, pattern);
-            for code in pattern_to_equation(&pattern).iter() {
-                evaluate(code);
+            for pattern in chunk.to_vec() {
+                println!("{:?} - pattern: {}", thread_id, pattern);
+                for code in pattern_to_equation(&pattern).iter() {
+                    let ev = evaluate(code);
+                    tx.send(ev).unwrap();
+                }
             }
-            *counter += 1;
-            println!("{} - {:?} - pattern: {}", counter, thread_id, pattern);
         });
-    });
-
+    }
+    drop(tx);
+    let results: Vec<String> = rx.into_iter().filter(|x| !x.is_empty()).collect();
+    println!("Results: {:?}", results);
     println!("Evaluated in: {:.2?} ", evaluate_time.elapsed());
 }
 

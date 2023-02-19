@@ -91,7 +91,7 @@ fn check_pattern(pattern: &str) -> bool {
       pattern.starts_with(&format!("{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       pattern.starts_with(&format!("{}{}{}{}{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       // pattern.matches(VAR).count() > 1 || // !++
-      !pattern.contains(LEFT_PARENS) ||
+      // !pattern.contains(LEFT_PARENS) ||
       // pattern.contains(&format!("{}{}{}", CONST, TWO_ARG_OPERATOR, CONST)) || // 2*2
       pattern.contains(&format!("{}", CONST).repeat(3)) ||
       !is_valid_parens(pattern)) // 2222
