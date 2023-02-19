@@ -2,6 +2,8 @@ use std::{
     fs::File,
     io::{self, BufRead},
     path::Path,
+    sync::Arc,
+    sync::Mutex,
     time::Instant,
 };
 
@@ -15,11 +17,10 @@ fn main() {
     let generate = true;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(8, 8);
+        generator::generate_patterns(10, 10);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
 
-    let evaluate_time = Instant::now();
     let mut db = Vec::new();
 
     if let Ok(lines) = read_lines("patterns.txt") {
@@ -44,14 +45,21 @@ fn main() {
         .num_threads(8)
         .build()
         .unwrap();
-
+    let evaluate_time = Instant::now();
     pool.install(|| {
+        // counter to be shared between threads
+        let counter = Arc::new(Mutex::new(0));
+
         db.par_iter().for_each(|pattern| {
-            // let thread_id = std::thread::current().id();
+            // increment counter
+            let mut counter = counter.lock().unwrap();
+            let thread_id = std::thread::current().id();
             // println!("{:?} - pattern: {}", thread_id, pattern);
             for code in pattern_to_equation(&pattern).iter() {
                 evaluate(code);
             }
+            *counter += 1;
+            println!("{} - {:?} - pattern: {}", counter, thread_id, pattern);
         });
     });
 
