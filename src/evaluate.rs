@@ -1,6 +1,7 @@
+use quick_js::Context;
 use std::collections::HashMap;
 
-use v8::{ContextScope, HandleScope};
+// use v8::{ContextScope, HandleScope};
 
 const SOLUTIONS: [(&str, &str); 12] = [
     ("evil", "0,3,5,6,9,10,12,15,17,18,20,23,24,27,29,30,33,34,36,39,40,43,45,46,48"),
@@ -31,57 +32,46 @@ const TEST_CODES: [fn(&str) -> String; 8] = [
 ];
 
 const JS_EVAL: &str = "
-results = []
-i = 0
-enoughResults = false
-safeBreak = 0
+var results = [];
+var i = 0;
+var enoughResults = false;
+var safeBreak = 0;
 
 function print(a) {
   if (results.length < 50) {
-    results.push(a)
+    results.push(a);
   } else {
-    enoughResults = true
+    enoughResults = true;
   }
 }
 
-try {
-
 ";
 
-pub fn evaluate(scope: &mut ContextScope<HandleScope>, pattern: &str) {
+pub fn evaluate(pattern: &str) {
     if !check_code(pattern) {
         return;
     }
 
+    let context = Context::new().unwrap();
+
     for function in TEST_CODES {
         let js_code = JS_EVAL.to_owned()
             + &function(pattern)
-            + "; results; } catch(e) {
-               console.error(e) 
-               results = []
-               i = 0
-               enoughResults = false
-               safeBreak = 0
-              }";
-        // println!("Evaluating: {}", &function(pattern));
-        let code = v8::String::new(scope, &js_code).unwrap();
-        let script = v8::Script::compile(scope, code, None).unwrap();
-        let result = script.run(scope).unwrap();
-        let result = result.to_string(scope).unwrap();
+            + "
+              results.join(',');
+              ";
 
+        let result = context.eval(&js_code).unwrap();
+        let result = result.as_str().unwrap();
         for (_i, solution) in SOLUTIONS.iter().enumerate() {
-            if result.to_rust_string_lossy(scope).starts_with(solution.1) {
+            if result.starts_with(solution.1) {
                 println!("Found solution: {} {}", solution.0, function(pattern));
                 return;
             }
         }
-
-        // println!(
-        //     "Evaluating: {}\n{}",
-        //     pattern,
-        //     result.to_rust_string_lossy(scope)
-        // );
     }
+
+    drop(context);
 }
 
 pub fn pattern_to_equation(pattern: &str) -> Vec<String> {

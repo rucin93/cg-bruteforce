@@ -15,13 +15,9 @@ fn main() {
     let generate = true;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(1, 6);
+        generator::generate_patterns(8, 8);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
-    let platform = v8::new_default_platform(0, false).make_shared();
-    v8::V8::set_flags_from_string("--max_old_space_size=4096");
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
 
     let evaluate_time = Instant::now();
     let mut db = Vec::new();
@@ -51,18 +47,11 @@ fn main() {
 
     pool.install(|| {
         db.par_iter().for_each(|pattern| {
-            // get thread id
-            let thread_id = std::thread::current().id();
-            println!("{:?} - pattern: {}", thread_id, pattern);
-            let isolate = &mut v8::Isolate::new(v8::CreateParams::default());
-            let handle_scope = &mut v8::HandleScope::new(isolate);
-            let context = v8::Context::new(handle_scope);
-            let scope = &mut v8::ContextScope::new(handle_scope, context);
+            // let thread_id = std::thread::current().id();
+            // println!("{:?} - pattern: {}", thread_id, pattern);
             for code in pattern_to_equation(&pattern).iter() {
-                evaluate(scope, code);
+                evaluate(code);
             }
-            // wait for thread to finish
-            // std::thread::sleep(std::time::Duration::from_millis(100));
         });
     });
 

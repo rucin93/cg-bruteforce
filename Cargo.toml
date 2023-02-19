@@ -12,3 +12,6 @@ regex = "1.5.4"
 threadpool = "1.8.1"
 num_cpus = "1.13.0"
 tokio = { version = "1.10.0", features = ["full"] }
+itertools = "0.10.1"
+rand = "0.8.3"
+quick-js= "0.4.1"
