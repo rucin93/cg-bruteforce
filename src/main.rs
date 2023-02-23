@@ -12,10 +12,12 @@ mod evaluate;
 mod generator;
 
 fn main() {
-    let generate = false;
+    // let threads = 1;
+    let threads = num_cpus::get();
+    let generate = true;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(10, 10);
+        generator::generate_patterns(10, 11);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
 
@@ -31,16 +33,9 @@ fn main() {
 
     println!("DB length : {}", db.len());
 
-    // single threaded
-    // for pattern in db {
-    //     for code in pattern_to_equation(&pattern).iter() {
-    //         evaluate(scope, code);
-    //     }
-    // }
-
     // multithreaded
     let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(8)
+        .num_threads(threads)
         .build()
         .unwrap();
     let evaluate_time = Instant::now();
@@ -48,7 +43,7 @@ fn main() {
     let unique_keys: Arc<std::sync::Mutex<std::collections::HashSet<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
 
-    for chunk in db.chunks(db.len() / num_cpus::get()) {
+    for chunk in db.chunks(db.len() / threads) {
         let tx = tx.clone();
         let chunk = Arc::new(chunk.to_vec());
         let unique_keys = unique_keys.clone();

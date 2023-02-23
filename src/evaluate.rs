@@ -20,7 +20,7 @@ const SOLUTIONS: [(&str, &str); 12] = [
 
 const STOP_STRING: &str = ",(safeBreak++ < 50)";
 
-const TEST_CODES: [fn(&str) -> String; 8] = [
+const TEST_CODES: [fn(&str) -> String; 12] = [
     |code| format!("for(i=0;i++{};)print({})", STOP_STRING, code),
     |code| format!("for(i=0;(i++{});){}&&print(i)", STOP_STRING, code),
     |code| format!("for(i=0;(i++{});){}||print(i)", STOP_STRING, code),
@@ -29,6 +29,10 @@ const TEST_CODES: [fn(&str) -> String; 8] = [
     |code| format!("for(i=0;i{};i++)print({})", STOP_STRING, code),
     |code| format!("for(i=1;i++{};)print({})", STOP_STRING, code),
     |code| format!("for(i=1;i{};i++)print({})", STOP_STRING, code),
+    |code| format!("for(i=1;{};){}||print(i)", STOP_STRING, code),
+    |code| format!("for(i=1;{};){}&&print(i)", STOP_STRING, code),
+    |code| format!("for(i=0;{};){}&&print(i)", STOP_STRING, code),
+    |code| format!("for(i=0;{};){}||print(i)", STOP_STRING, code),
 ];
 
 const JS_EVAL: &str = "
@@ -64,7 +68,7 @@ pub fn evaluate(pattern: &str) -> (String, String) {
         let result = context.eval(&js_code).unwrap();
         let result = result.as_str().unwrap();
         for (_i, solution) in SOLUTIONS.iter().enumerate() {
-            if result.starts_with(solution.1) {
+            if result.contains(solution.1) {
                 return (solution.0.to_string(), function(pattern));
             }
         }
@@ -84,7 +88,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
     let char_map: HashMap<char, Vec<char>> = [
         ('x', vec!['i']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
-        // ('i', vec!['+', '+', '-', '-']),
+        ('i', vec!['+', '+', '-', '-']),
         ('~', vec!['~', '!']),
         ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
