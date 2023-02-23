@@ -17,10 +17,9 @@ fn main() {
     let generate = true;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(10, 11);
+        generator::generate_patterns(11, 11);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
-
     let mut db = Vec::new();
 
     if let Ok(lines) = read_lines("patterns.txt") {
