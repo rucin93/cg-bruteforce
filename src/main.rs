@@ -1,3 +1,5 @@
+extern crate rand;
+
 use std::{
     fs::File,
     io::{self, BufRead},
@@ -11,13 +13,15 @@ use evaluate::{evaluate, pattern_to_equation};
 mod evaluate;
 mod generator;
 
+use rand::seq::SliceRandom;
+
 fn main() {
     // let threads = 1;
     let threads = num_cpus::get();
     let generate = true;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(11, 11);
+        generator::generate_patterns(8, 8);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
     let mut db = Vec::new();
@@ -29,6 +33,12 @@ fn main() {
             }
         }
     }
+
+    // shuffle db
+    let mut asd: Vec<String> = db.clone().into_iter().collect();
+    let mut rng = rand::thread_rng();
+
+    asd.shuffle(&mut rng);
 
     println!("DB length : {}", db.len());
 
@@ -42,7 +52,7 @@ fn main() {
     let unique_keys: Arc<std::sync::Mutex<std::collections::HashSet<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
 
-    for chunk in db.chunks(db.len() / threads) {
+    for chunk in asd.chunks(db.len() / threads) {
         let tx = tx.clone();
         let chunk = Arc::new(chunk.to_vec());
         let unique_keys = unique_keys.clone();

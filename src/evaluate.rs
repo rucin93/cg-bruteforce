@@ -1,13 +1,14 @@
-use quick_js::Context;
+// use quick_js::Context;
 use std::collections::HashMap;
 
 // use v8::{ContextScope, HandleScope};
 
-const SOLUTIONS: [(&str, &str); 12] = [
+const SOLUTIONS: [(&str, &str); 13] = [
     ("evil", "0,3,5,6,9,10,12,15,17,18,20,23,24,27,29,30,33,34,36,39,40,43,45,46,48"),
     ("odious", "1,2,4,7,8,11,13,14,16,19,21,22,25,26,28,31,32,35,37,38,41,42,44,47,49,50"),
     ("abnundant", "12,18,20,24,30,36,40,42,48,54,56,60,66,70,72,78,80,84,88,90,96,100,102,104"),
     ("kolakoski", "1,2,2,1,1,2,1,2,2,1,2,2,1,1,2,1,1,2,2,1,2,1,1,2,1,2,2,1,1,2,1,1"),
+    ("kolakoski based 0", "0,1,1,0,0,1,0,1,1,0,1,1,0,0,1,0,0,1,1,0,1,0,0,1,0,1,1,0,0,1,0,0"),
     ("lucky", "1,3,7,9,13,15,21,25,31,33,37,43,49,51,63,67,69,73,75,79,87,93,99,105,111,115"),
     ("niven", "1,2,3,4,5,6,7,8,9,10,12,18,20,21,24,27,30,36,40,42,45,48,50,54,60,63,70,72,80,81,84,90,100,102,108,110,111,112,114,117,120"),
     ("prime", "2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127,131,137"),
@@ -18,62 +19,91 @@ const SOLUTIONS: [(&str, &str); 12] = [
     ("van-eck", "0,0,1,0,2,0,2,2,1,6,0,5,0,2,6,5,4,0,5,3,0,3,2,9,0,4,9,3,6,14,0,6,3,5,15,0,5,3,5,2,17,0,6,11,0,3,8,0"),
 ];
 
-const STOP_STRING: &str = ",(safeBreak++ < 50)";
+// const STOP_STRING: &str = ",(safeBreak++ < 50)";
 
-const TEST_CODES: [fn(&str) -> String; 7] = [
-    |code| format!("for(i=0;i++{};)print({})", STOP_STRING, code),
-    |code| format!("for(i=0;(i++{});){}&&print(i)", STOP_STRING, code),
-    |code| format!("for(i=0;(i++{});){}||print(i)", STOP_STRING, code),
-    |code| format!("for(i=1;(i++{});){}&&print(i)", STOP_STRING, code),
-    |code| format!("for(i=1;(i++{});){}||print(i)", STOP_STRING, code),
-    |code| format!("for(i=0;i{};i++)print({})", STOP_STRING, code),
-    |code| format!("for(i=1;i{};i++)print({})", STOP_STRING, code),
-    // |code| format!("for(i=1;{};){}||print(i)", STOP_STRING, code),
-    // |code| format!("for(i=1;{};){}&&print(i)", STOP_STRING, code),
-    // |code| format!("for(i=0;{};){}&&print(i)", STOP_STRING, code),
-    // |code| format!("for(i=0;{};){}||print(i)", STOP_STRING, code),
-];
+// const TEST_CODES: [fn(&str) -> String; 11] = [
+//     |code| format!("for(i=0;i++{};)print({})", STOP_STRING, code),
+//     |code| format!("for(i=0;(i++{});){}&&print(i)", STOP_STRING, code),
+//     |code| format!("for(i=0;(i++{});){}||print(i)", STOP_STRING, code),
+//     |code| format!("for(i=1;(i++{});){}&&print(i)", STOP_STRING, code),
+//     |code| format!("for(i=1;(i++{});){}||print(i)", STOP_STRING, code),
+//     |code| format!("for(i=0;i{};i++)print({})", STOP_STRING, code),
+//     |code| format!("for(i=1;i{};i++)print({})", STOP_STRING, code),
+//     |code| format!("for(i=1;i{};){}||print(i)", STOP_STRING, code),
+//     |code| format!("for(i=1;i{};){}&&print(i)", STOP_STRING, code),
+//     |code| format!("for(i=0;i{};){}&&print(i)", STOP_STRING, code),
+//     |code| format!("for(i=0;i{};){}||print(i)", STOP_STRING, code),
+// ];
 
-const JS_EVAL: &str = "
-var results = [];
-var i = 0;
-var enoughResults = false;
-var safeBreak = 0;
+// const JS_EVAL: &str = "
+// var results = [];
+// var i = 0;
+// var enoughResults = false;
+// var safeBreak = 0;
 
-function print(a) {
-  if (results.length < 50) {
-    results.push(a);
-  } else {
-    enoughResults = true;
-  }
-}
+// function print(a) {
+//   if (results.length < 50) {
+//     results.push(a);
+//   } else {
+//     enoughResults = true;
+//   }
+// }
 
-";
+// ";
 
 pub fn evaluate(pattern: &str) -> (String, String) {
     if !check_code(pattern) {
         return ("".to_string(), "".to_string());
     }
 
-    let context = Context::new().unwrap();
-
-    for function in TEST_CODES {
-        let js_code = JS_EVAL.to_owned()
-            + &function(pattern)
-            + "
-              results.join(',');
-              ";
-
-        let result = context.eval(&js_code).unwrap();
-        let result = result.as_str().unwrap();
-        for (_i, solution) in SOLUTIONS.iter().enumerate() {
-            if result.contains(solution.1) {
-                return (solution.0.to_string(), function(pattern));
+    // println!("Evaluating: {}", infix_to_rpn(pattern));
+    let mut map_zero = Vec::new();
+    let mut map_non_zero = Vec::new();
+    // println!("Evaluating: {}", infix_to_rpn(pattern));
+    for x in 0..=100 {
+        let expression = infix_to_rpn(pattern).replace("i", &x.to_string());
+        let result = match evaluate_rpn(&expression) {
+            Ok(r) => r,
+            Err(e) => {
+                // eprintln!("Error evaluating expression {}: {}", expression, e);
+                continue;
             }
+        };
+        // println!("x = {}, result = {}", x, result);
+        if result == 0.0 {
+            map_zero.push(x.to_string());
+        } else {
+            map_non_zero.push(x.to_string());
         }
     }
 
-    drop(context);
+    // let context = Context::new().unwrap();
+
+    // for function in TEST_CODES {
+    //     let js_code = JS_EVAL.to_owned()
+    //         + &function(pattern)
+    //         + "
+    //           results.join(',');
+    //           ";
+
+    //     let result = context.eval(&js_code).unwrap();
+    //     let result = result.as_str().unwrap();
+    for (_i, solution) in SOLUTIONS.iter().enumerate() {
+        if map_zero.join(",").contains(solution.1) {
+            return (
+                solution.0.to_string(),
+                format!("for(i=0;i++<50;){}||print(i)", pattern),
+            );
+        } else if map_non_zero.join(",").contains(solution.1) {
+            return (
+                solution.0.to_string(),
+                format!("for(i=0;i++<50;){}&&print(i)", pattern),
+            );
+        }
+    }
+    // }
+
+    // drop(context);
     return ("".to_string(), "".to_string());
 }
 
@@ -92,6 +122,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
         ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
         (')', vec![')']),
+        (' ', vec![' ']),
     ]
     .iter()
     .cloned()
@@ -148,4 +179,126 @@ fn check_code(code: &str) -> bool {
         && !regex::Regex::new(r"\d\+\+").unwrap().is_match(code)
         && !regex::Regex::new(r"(\d|i)--i").unwrap().is_match(code)
         && !regex::Regex::new(r"[^\di]-i\*\*").unwrap().is_match(code)
+}
+
+fn infix_to_rpn(expression: &str) -> String {
+    let mut output_queue: Vec<String> = Vec::new();
+    let mut operator_stack: Vec<String> = Vec::new();
+
+    let operators = vec!["+", "-", "*", "/", "%", "^", "&", "|", "~", "!"];
+
+    let mut iter = expression.chars().peekable();
+    while let Some(c) = iter.next() {
+        if c.is_numeric() || c == '.' {
+            let mut number = c.to_string();
+            while let Some(next) = iter.peek() {
+                if next.is_numeric() || *next == '.' {
+                    number.push(*next);
+                    iter.next();
+                } else {
+                    break;
+                }
+            }
+            output_queue.push(number);
+        } else if c == 'i' {
+            output_queue.push(String::from("i"));
+        } else if operators.contains(&c.to_string().as_str()) {
+            while let Some(top) = operator_stack.last() {
+                if operators.contains(&top.as_str())
+                    && ((c != '^' && top != "^") || (c == '^' && top == "^"))
+                    && precedence(c.to_string().as_str()) <= precedence(top)
+                {
+                    output_queue.push(operator_stack.pop().unwrap());
+                } else {
+                    break;
+                }
+            }
+            operator_stack.push(String::from(c));
+        } else if c == '(' {
+            operator_stack.push(String::from(c));
+        } else if c == ')' {
+            while let Some(top) = operator_stack.pop() {
+                if top == "(" {
+                    break;
+                } else {
+                    output_queue.push(top);
+                }
+            }
+        } else if c == '~' {
+            while let Some(top) = operator_stack.last() {
+                if top == "~" || top == "!" {
+                    break;
+                } else {
+                    operator_stack.push(String::from(c));
+                    break;
+                }
+            }
+        } else if c == '!' {
+            while let Some(top) = operator_stack.last() {
+                if top == "~" || top == "!" {
+                    break;
+                } else {
+                    operator_stack.push(String::from(c));
+                    break;
+                }
+            }
+        } else if !c.is_whitespace() {
+            eprintln!("Invalid token: {}", c);
+        }
+    }
+
+    while let Some(op) = operator_stack.pop() {
+        output_queue.push(op);
+    }
+
+    output_queue.join(" ")
+}
+
+fn precedence(op: &str) -> u8 {
+    match op {
+        "^" => 4,
+        "*" | "/" | "%" => 3,
+        "+" | "-" => 2,
+        "&" => 1,
+        "|" => 0,
+        "~" | "!" => 5,
+        _ => 1,
+    }
+}
+
+fn evaluate_rpn(expression: &str) -> Result<f64, &'static str> {
+    let mut stack: Vec<f64> = Vec::new();
+
+    for token in expression.split_whitespace() {
+        if let Ok(number) = token.parse::<f64>() {
+            stack.push(number);
+        } else {
+            let (a, b) = match (stack.pop(), stack.pop()) {
+                (Some(x), Some(y)) => (y, x),
+                _ => return Err("Insufficient operands"),
+            };
+            match token {
+                "+" => stack.push(a + b),
+                "-" => stack.push(a - b),
+                "*" => stack.push(a * b),
+                "/" => {
+                    if b == 0.0 {
+                        return Err("Division by zero");
+                    } else {
+                        stack.push(a / b);
+                    }
+                }
+                "^" => stack.push((a as i64 ^ b as i64) as f64),
+                "&" => stack.push((a as i64 & b as i64) as f64),
+                "|" => stack.push((a as i64 | b as i64) as f64),
+                "%" => stack.push(a % b),
+                _ => return Err("Invalid operator"),
+            }
+        }
+    }
+
+    match stack.pop() {
+        Some(result) => Ok(result),
+        None => Err("Expression is empty"),
+    }
 }
