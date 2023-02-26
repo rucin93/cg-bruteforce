@@ -11,11 +11,11 @@ const TWO_ARG_OPERATOR: char = '*'; // 0+1, 0-1, 0*1, 0/1, 0**1, 0%1, 0&&1, 0&1,
 const LEFT_PARENS: char = '(';
 const RIGHT_PARENS: char = ')';
 const PATTERNS_TXT_PATH: &str = "./patterns.txt";
-const PATTERN_CHARS: [char; 6] = [
+const PATTERN_CHARS: [char; 5] = [
     VAR,
     CONST,
     // CHANGE,
-    RIGHT_ARG_OPERATOR,
+    // RIGHT_ARG_OPERATOR,
     TWO_ARG_OPERATOR,
     LEFT_PARENS,
     RIGHT_PARENS,
@@ -28,6 +28,7 @@ pub fn generate_patterns(min_length: usize, max_length: usize) {
         .append(true)
         .open(PATTERNS_TXT_PATH)
         .expect("Unable to open file");
+    let mut map = Vec::new();
 
     for i in min_length..=max_length {
         println!("Generating patterns of length: {}", i);
@@ -51,11 +52,15 @@ pub fn generate_patterns(min_length: usize, max_length: usize) {
 
             let generated_word: String = word_chars.iter().collect();
             if check_pattern(&generated_word) {
+                map.push(generated_word.clone());
                 // append to file
-                file.write_all(format!("{}\n", generated_word).as_bytes())
-                    .expect("Unable to write data");
             }
         }
+    }
+    map.sort_by_key(|s| s.matches("2").count());
+    for pattern in map {
+        file.write_all(format!("{}\n", pattern).as_bytes())
+            .expect("Unable to write data");
     }
 }
 
@@ -91,7 +96,7 @@ fn check_pattern(pattern: &str) -> bool {
       pattern.starts_with(&format!("{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       pattern.starts_with(&format!("{}{}{}{}{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       // pattern.matches(VAR).count() > 1 || // !++
-      // !pattern.contains(LEFT_PARENS) ||
+      !pattern.contains(LEFT_PARENS) ||
       // pattern.contains(&format!("{}{}{}", CONST, TWO_ARG_OPERATOR, CONST)) || // 2*2
       pattern.contains(&format!("{}", CONST).repeat(3)) ||
       !is_valid_parens(pattern)) // 2222

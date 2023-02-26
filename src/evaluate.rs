@@ -53,15 +53,14 @@ const SOLUTIONS: [(&str, &str); 13] = [
 
 pub fn evaluate(pattern: &str) -> (String, String) {
     if !check_code(pattern) {
+        // wrong euqation
         return ("".to_string(), "".to_string());
     }
 
-    // println!("Evaluating: {}", infix_to_rpn(pattern));
     let mut map_zero = Vec::new();
     let mut map_non_zero = Vec::new();
-    // println!("Evaluating: {}", infix_to_rpn(pattern));
     for x in 0..=100 {
-        let expression = infix_to_rpn(pattern).replace("i", &x.to_string());
+        let expression = pattern.replace("i", &x.to_string());
         let result = match evaluate_rpn(&expression) {
             Ok(r) => r,
             Err(e) => {
@@ -69,7 +68,7 @@ pub fn evaluate(pattern: &str) -> (String, String) {
                 continue;
             }
         };
-        // println!("x = {}, result = {}", x, result);
+
         if result == 0.0 {
             map_zero.push(x.to_string());
         } else {
@@ -77,33 +76,20 @@ pub fn evaluate(pattern: &str) -> (String, String) {
         }
     }
 
-    // let context = Context::new().unwrap();
-
-    // for function in TEST_CODES {
-    //     let js_code = JS_EVAL.to_owned()
-    //         + &function(pattern)
-    //         + "
-    //           results.join(',');
-    //           ";
-
-    //     let result = context.eval(&js_code).unwrap();
-    //     let result = result.as_str().unwrap();
     for (_i, solution) in SOLUTIONS.iter().enumerate() {
         if map_zero.join(",").contains(solution.1) {
             return (
                 solution.0.to_string(),
-                format!("for(i=0;i++<50;){}||print(i)", pattern),
+                format!("for(i=0;i++<50;){}||print(i)", rpn_to_infix(pattern)),
             );
         } else if map_non_zero.join(",").contains(solution.1) {
             return (
                 solution.0.to_string(),
-                format!("for(i=0;i++<50;){}&&print(i)", pattern),
+                format!("for(i=0;i++<50;){}&&print(i)", rpn_to_infix(pattern)),
             );
         }
     }
-    // }
-
-    // drop(context);
+    // nothing found
     return ("".to_string(), "".to_string());
 }
 
@@ -118,11 +104,10 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
         ('x', vec!['i']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
         // ('i', vec!['+', '+', '-', '-']),
-        ('~', vec!['~', '!']),
-        ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
+        ('~', vec!['~']),
+        ('*', vec!['+', '-', '*', '%', '&', '|', '^']),
         ('(', vec!['(']),
         (')', vec![')']),
-        (' ', vec![' ']),
     ]
     .iter()
     .cloned()
@@ -161,7 +146,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
             })
             .collect::<String>();
 
-        equations.push(equation);
+        equations.push(infix_to_rpn(&equation));
     }
 
     return equations;
@@ -175,6 +160,8 @@ fn check_code(code: &str) -> bool {
         && !code.contains("!i**")
         && !code.contains("i+++")
         && !code.contains("**-i")
+        && !regex::Regex::new(r"(\*)1(\D|)").unwrap().is_match(code)
+        && !regex::Regex::new(r"(\D)0\D").unwrap().is_match(code)
         && !regex::Regex::new(r"0\d").unwrap().is_match(code)
         && !regex::Regex::new(r"\d\+\+").unwrap().is_match(code)
         && !regex::Regex::new(r"(\d|i)--i").unwrap().is_match(code)
@@ -256,13 +243,13 @@ fn infix_to_rpn(expression: &str) -> String {
 
 fn precedence(op: &str) -> u8 {
     match op {
-        "^" => 4,
-        "*" | "/" | "%" => 3,
-        "+" | "-" => 2,
-        "&" => 1,
-        "|" => 0,
-        "~" | "!" => 5,
-        _ => 1,
+        "~" | "!" => 5,       // negation first
+        "*" | "/" | "%" => 4, // then multiplication / division / modulo
+        "+" | "-" => 3,       // then addition / subtraction
+        "&" => 2,             // then and
+        "^" => 1,             // then xor
+        "|" => 0,             // then or
+        _ => 1,               // default
     }
 }
 
@@ -300,5 +287,38 @@ fn evaluate_rpn(expression: &str) -> Result<f64, &'static str> {
     match stack.pop() {
         Some(result) => Ok(result),
         None => Err("Expression is empty"),
+    }
+}
+
+fn rpn_to_infix(expression: &str) -> String {
+    let mut stack: Vec<String> = Vec::new();
+
+    for token in expression.split_whitespace() {
+        if let Ok(number) = token.parse::<f64>() {
+            stack.push(number.to_string());
+        } else if token == "i" {
+            stack.push(String::from("i"));
+        } else {
+            let (a, b) = match (stack.pop(), stack.pop()) {
+                (Some(x), Some(y)) => (y, x),
+                _ => return String::from("Invalid expression"),
+            };
+            let operator = match token {
+                "+" | "-" | "*" | "/" | "%" | "^" | "&" | "|" => token.to_string(),
+                "~" => format!("~{}", a),
+                "!" => format!("!{}", a),
+                _ => return String::from("Invalid operator"),
+            };
+            let expr = match operator.as_str() {
+                "~" | "!" => format!("{}({})", operator, a),
+                _ => format!("({}{}{})", a, operator, b),
+            };
+            stack.push(expr);
+        }
+    }
+
+    match stack.pop() {
+        Some(result) => result,
+        None => String::from("Invalid expression"),
     }
 }
