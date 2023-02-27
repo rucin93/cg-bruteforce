@@ -42,15 +42,39 @@ fn main() {
     }
 
     let map: Vec<String> = db.clone().into_iter().collect();
-    let mut db_chunks: Vec<Vec<String>> = vec![vec![]; 40];
+    // let mut db_chunks: Vec<Vec<String>> = vec![vec![]; 40];
 
-    for s in db {
+    // for s in db {
+    //     let count = s.matches("2").count();
+    //     db_chunks[count].push(s);
+    // }
+    // db_chunks.retain(|chunk| !chunk.is_empty());
+
+    let mut diffs: Vec<(String, i32)> = map
+        .iter()
+        .map(|s| {
+            let diff = s.chars().fold(0, |acc, c| match c {
+                '2' => acc + 10,
+                '*' => acc + 7,
+                '~' => acc + 2,
+                '(' | ')' | 'x' => acc + 1,
+                _ => acc,
+            });
+            (s.to_string(), diff)
+        })
+        .collect();
+
+    // diffs.sort_by_key(|(_, diff)| *diff);
+    diffs.sort_by_key(|(_, diff)| -diff);
+    let mut db_chunks: Vec<Vec<String>> = vec![vec![]; 40];
+    for (s, _) in diffs {
         if done.contains(&s) {
             continue;
         }
         let count = s.matches("2").count();
         db_chunks[count].push(s);
     }
+
     db_chunks.retain(|chunk| !chunk.is_empty());
 
     // println!("{:?}", db_chunks);
