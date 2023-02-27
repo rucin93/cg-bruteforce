@@ -13,15 +13,13 @@ use evaluate::{evaluate, pattern_to_equation};
 mod evaluate;
 mod generator;
 
-// use rand::seq::SliceRandom;
-
 fn main() {
-    let threads = 2;
-    // let threads = num_cpus::get();
+    // let threads = 2;
+    let threads = num_cpus::get();
     let generate = false;
     if generate {
         let timer = Instant::now();
-        generator::generate_patterns(11, 11);
+        generator::generate_patterns(1, 11);
         println!("Generated in: {:.2?} ", timer.elapsed());
     }
     let mut db = Vec::new();
@@ -43,7 +41,6 @@ fn main() {
         }
     }
 
-    // shuffle db
     let map: Vec<String> = db.clone().into_iter().collect();
     let mut db_chunks: Vec<Vec<String>> = vec![vec![]; 40];
 
@@ -77,7 +74,11 @@ fn main() {
     let unique_keys: Arc<std::sync::Mutex<std::collections::HashSet<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
     for map in db_chunks {
-        for chunk in map.chunks(map.len() / threads) {
+        let mut chunks = map.chunks(1);
+        if map.len() >= threads {
+            chunks = map.chunks(map.len() / threads);
+        }
+        for chunk in chunks {
             let tx = tx.clone();
             let chunk = Arc::new(chunk.to_vec());
             let unique_keys = unique_keys.clone();
@@ -92,13 +93,21 @@ fn main() {
                     for code in pattern_to_equation(&pattern).iter() {
                         let ev = evaluate(code);
                         if !ev.0.is_empty() {
-                            println!("{:?} - Found solution: {} {}", thread_id, ev.0, ev.1);
+                            let message = format!("{} {}\n", ev.0, ev.1);
                             if !unique_keys.lock().unwrap().contains(&ev.0.clone()) {
                                 unique_keys.lock().unwrap().insert(ev.0.clone());
                                 tx.send(ev).unwrap();
+
+                                let mut file = OpenOptions::new()
+                                    .append(true)
+                                    .open("found.txt")
+                                    .expect("Unable to open file");
+
+                                file.write_all(message.as_bytes())
+                                    .expect("Unable to write data");
                             }
 
-                            println!("Found solutions for: {:?}", unique_keys.lock().unwrap());
+                            println!("{}", &message);
                         }
                     }
 

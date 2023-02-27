@@ -63,8 +63,8 @@ pub fn evaluate(pattern: &str) -> (String, String) {
         let expression = pattern.replace("i", &x.to_string());
         let result = match evaluate_rpn(&expression) {
             Ok(r) => r,
-            Err(e) => {
-                // eprintln!("Error evaluating expression {}: {}", expression, e);
+            Err(_e) => {
+                // eprintln!("Error evaluating expression {}: {}", expression, _e);
                 continue;
             }
         };
@@ -104,8 +104,8 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
         ('x', vec!['i']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
         // ('i', vec!['+', '+', '-', '-']),
-        ('~', vec!['~']),
-        ('*', vec!['+', '-', '*', '%', '&', '|', '^']),
+        ('~', vec!['~', '!']),
+        ('*', vec!['+', '-', '*', '/', '%', '&', '|', '^']),
         ('(', vec!['(']),
         (')', vec![')']),
     ]

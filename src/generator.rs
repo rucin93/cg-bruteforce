@@ -11,11 +11,11 @@ const TWO_ARG_OPERATOR: char = '*'; // 0+1, 0-1, 0*1, 0/1, 0**1, 0%1, 0&&1, 0&1,
 const LEFT_PARENS: char = '(';
 const RIGHT_PARENS: char = ')';
 const PATTERNS_TXT_PATH: &str = "./patterns.txt";
-const PATTERN_CHARS: [char; 5] = [
+const PATTERN_CHARS: [char; 6] = [
     VAR,
     CONST,
     // CHANGE,
-    // RIGHT_ARG_OPERATOR,
+    RIGHT_ARG_OPERATOR,
     TWO_ARG_OPERATOR,
     LEFT_PARENS,
     RIGHT_PARENS,
@@ -96,7 +96,7 @@ fn check_pattern(pattern: &str) -> bool {
       pattern.starts_with(&format!("{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       pattern.starts_with(&format!("{}{}{}{}{}{}{}{}", CONST, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST, TWO_ARG_OPERATOR, CONST)) || // !++
       // pattern.matches(VAR).count() > 1 || // !++
-      !pattern.contains(LEFT_PARENS) ||
+      // !pattern.contains(LEFT_PARENS) ||
       // pattern.contains(&format!("{}{}{}", CONST, TWO_ARG_OPERATOR, CONST)) || // 2*2
       pattern.contains(&format!("{}", CONST).repeat(3)) ||
       !is_valid_parens(pattern)) // 2222
