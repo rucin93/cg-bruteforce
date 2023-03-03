@@ -57,8 +57,25 @@ pub fn generate_patterns(min_length: usize, max_length: usize) {
             }
         }
     }
-    map.sort_by_key(|s| s.matches("2").count());
-    for pattern in map {
+    let mut diffs: Vec<(String, i32)> = map
+        .iter()
+        .map(|s| {
+            let diff = s.chars().fold(0, |acc, c| match c {
+                '2' => acc + 10,
+                '*' => acc + 7,
+                '~' => acc + 3,
+                'i' => acc + 2,
+                '(' | ')' | 'x' => acc + 1,
+                _ => acc,
+            });
+            (s.to_string(), diff)
+        })
+        .collect();
+
+    // diffs.sort_by_key(|(_, diff)| *diff);
+    diffs.sort_by_key(|(_, diff)| -diff);
+    // map.sort_by_key(|s| s.matches("2").count());
+    for (pattern, _) in diffs {
         file.write_all(format!("{}\n", pattern).as_bytes())
             .expect("Unable to write data");
     }
