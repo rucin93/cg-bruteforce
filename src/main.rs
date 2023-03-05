@@ -134,7 +134,6 @@ fn main() {
                         for res in ev {
                             if !res.0.is_empty() {
                                 let message = format!("{} {}\n", res.0.clone(), res.1.clone());
-                                // find if unique_keys contains res.0 and if value length is less then res.1 or null insert res.1 and save to file
 
                                 let cloned = res.clone();
                                 unique_keys.lock().unwrap().entry(res.0.clone()).and_modify(|e| {
@@ -144,9 +143,7 @@ fn main() {
                                 }).or_insert(cloned.1.clone());
 
                                 tx.send(res).unwrap();
-                                // clear file found.txt
  
-                                // write unique_keys to file
                                 let mut file = OpenOptions::new()
                                     .write(true)
                                     .open("found.txt")
