@@ -1,7 +1,5 @@
-// use quick_js::Context;
 use std::collections::HashMap;
 
-// use v8::{ContextScope, HandleScope};
 
 const SOLUTIONS: [(&str, &str); 13] = [
     ("evil", "0,3,5,6,9,10,12,15,17,18,20,23,24,27,29,30,33,34,36,39,40,43,45,46,48"),
@@ -19,48 +17,88 @@ const SOLUTIONS: [(&str, &str); 13] = [
     ("van-eck", "0,0,1,0,2,0,2,2,1,6,0,5,0,2,6,5,4,0,5,3,0,3,2,9,0,4,9,3,6,14,0,6,3,5,15,0,5,3,5,2,17,0,6,11,0,3,8,0"),
 ];
 
-// const STOP_STRING: &str = ",(safeBreak++ < 50)";
+pub fn evaluate(pattern: &str) -> Vec<(String, String)> {
+    let mut results = Vec::new();
 
-// const TEST_CODES: [fn(&str) -> String; 11] = [
-//     |code| format!("for(i=0;i++{};)print({})", STOP_STRING, code),
-//     |code| format!("for(i=0;(i++{});){}&&print(i)", STOP_STRING, code),
-//     |code| format!("for(i=0;(i++{});){}||print(i)", STOP_STRING, code),
-//     |code| format!("for(i=1;(i++{});){}&&print(i)", STOP_STRING, code),
-//     |code| format!("for(i=1;(i++{});){}||print(i)", STOP_STRING, code),
-//     |code| format!("for(i=0;i{};i++)print({})", STOP_STRING, code),
-//     |code| format!("for(i=1;i{};i++)print({})", STOP_STRING, code),
-//     |code| format!("for(i=1;i{};){}||print(i)", STOP_STRING, code),
-//     |code| format!("for(i=1;i{};){}&&print(i)", STOP_STRING, code),
-//     |code| format!("for(i=0;i{};){}&&print(i)", STOP_STRING, code),
-//     |code| format!("for(i=0;i{};){}||print(i)", STOP_STRING, code),
-// ];
-
-// const JS_EVAL: &str = "
-// var results = [];
-// var i = 0;
-// var enoughResults = false;
-// var safeBreak = 0;
-
-// function print(a) {
-//   if (results.length < 50) {
-//     results.push(a);
-//   } else {
-//     enoughResults = true;
-//   }
-// }
-
-// ";
-
-pub fn evaluate(pattern: &str) -> (String, String) {
     if !check_code(pattern) {
         // wrong euqation
-        return ("".to_string(), "".to_string());
+        return results;
     }
 
-    let mut map_zero = Vec::new();
-    let mut map_non_zero = Vec::new();
-    for x in 0..=100 {
-        let expression = pattern.replace("i", &x.to_string());
+
+    let map_zero=evaluate_based((&pattern).to_string(), 0, 0);
+    let map_non_zero=evaluate_based((&pattern).to_string(), 0, 1);
+    let from_one_zero = evaluate_based((&pattern).to_string(), 1, 0);
+    let from_one_non_zero = evaluate_based((&pattern).to_string(), 1, 1);
+
+    for (_i, solution) in SOLUTIONS.iter().enumerate() {
+        if pattern.contains("j") {
+            if map_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(i=j=0;i<50;i++){}||print(j=i)", rpn_to_infix(pattern)),
+                ));
+            } 
+            
+            if map_non_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(j=i=0;i<50;i++){}&&print(j=i)", rpn_to_infix(pattern)),
+                ));
+            }
+
+            if from_one_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(j=i=1;i<50;i++){}&&print(j=i)", rpn_to_infix(pattern)),
+                ));
+            }
+
+            if from_one_non_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(j=i=1;i<50;i++){}&&print(j=i)", rpn_to_infix(pattern)),
+                ));
+            }
+        } else {
+            if map_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(i=0;i<50;i++){}||print(i)", rpn_to_infix(pattern)),
+                ));
+            } 
+            
+            if map_non_zero.join(",").contains(solution.1) {
+                results.push( (
+                    solution.0.to_string(),
+                    format!("for(i=0;i<50;i++){}&&print(i)", rpn_to_infix(pattern)),
+                ));
+            }
+
+            if from_one_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(i=1;i<51;i++){}&&print(j=i)", rpn_to_infix(pattern)),
+                ));
+            }
+
+            if from_one_non_zero.join(",").contains(solution.1) {
+                results.push((
+                    solution.0.to_string(),
+                    format!("for(i=1;i<51;i++){}&&print(j=i)", rpn_to_infix(pattern)),
+                ));
+            }
+        }
+    }
+
+    return results;
+}
+
+fn evaluate_based(pattern: String, from: i32, base: i32) -> Vec<String> {
+    let mut map = Vec::new();
+    let mut j = from;
+    for x in from..=100 {
+        let expression = pattern.replace("i", &x.to_string()).replace("j", &j.to_string());
         let result = match evaluate_rpn(&expression) {
             Ok(r) => r,
             Err(_e) => {
@@ -68,29 +106,21 @@ pub fn evaluate(pattern: &str) -> (String, String) {
                 continue;
             }
         };
-
-        if result == 0.0 {
-            map_zero.push(x.to_string());
+        if base != 0 {
+            if result != 0.0 {
+                map.push(x.to_string());
+                j = x;
+            }
         } else {
-            map_non_zero.push(x.to_string());
+            if result == 0.0 {
+                map.push(x.to_string());
+                j = x;
+            }
         }
+       
     }
 
-    for (_i, solution) in SOLUTIONS.iter().enumerate() {
-        if map_zero.join(",").contains(solution.1) {
-            return (
-                solution.0.to_string(),
-                format!("for(i=0;i++<50;){}||print(i)", rpn_to_infix(pattern)),
-            );
-        } else if map_non_zero.join(",").contains(solution.1) {
-            return (
-                solution.0.to_string(),
-                format!("for(i=0;i++<50;){}&&print(i)", rpn_to_infix(pattern)),
-            );
-        }
-    }
-    // nothing found
-    return ("".to_string(), "".to_string());
+    return map;
 }
 
 pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
@@ -101,7 +131,7 @@ pub fn pattern_to_equation(pattern: &str) -> Vec<String> {
     }
 
     let char_map: HashMap<char, Vec<char>> = [
-        ('x', vec!['i']),
+        ('x', vec!['i', 'j']),
         ('2', vec!['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']),
         // ('i', vec!['+', '+', '-', '-']),
         ('~', vec!['~', '!']),
@@ -160,12 +190,20 @@ fn check_code(code: &str) -> bool {
         && !code.contains("!i**")
         && !code.contains("i+++")
         && !code.contains("**-i")
+        && !code.contains("~j**")
+        && !code.starts_with("+j**")
+        && !code.starts_with("-j**")
+        && !code.contains("!j**")
+        && !code.contains("j+++")
+        && !code.contains("**-j")
         && !regex::Regex::new(r"(\*)1(\D|)").unwrap().is_match(code)
         && !regex::Regex::new(r"(\D)0\D").unwrap().is_match(code)
         && !regex::Regex::new(r"0\d").unwrap().is_match(code)
         && !regex::Regex::new(r"\d\+\+").unwrap().is_match(code)
         && !regex::Regex::new(r"(\d|i)--i").unwrap().is_match(code)
         && !regex::Regex::new(r"[^\di]-i\*\*").unwrap().is_match(code)
+        && !regex::Regex::new(r"(\d|j)--j").unwrap().is_match(code)
+        && !regex::Regex::new(r"[^\dj]-j\*\*").unwrap().is_match(code)
 }
 
 fn infix_to_rpn(expression: &str) -> String {
@@ -189,6 +227,8 @@ fn infix_to_rpn(expression: &str) -> String {
             output_queue.push(number);
         } else if c == 'i' {
             output_queue.push(String::from("i"));
+        } else if c == 'j' {
+            output_queue.push(String::from("j"));
         } else if operators.contains(&c.to_string().as_str()) {
             while let Some(top) = operator_stack.last() {
                 if operators.contains(&top.as_str())
@@ -298,6 +338,8 @@ fn rpn_to_infix(expression: &str) -> String {
             stack.push(number.to_string());
         } else if token == "i" {
             stack.push(String::from("i"));
+        } else if token == "j" {
+            stack.push(String::from("j"));
         } else {
             let (a, b) = match (stack.pop(), stack.pop()) {
                 (Some(x), Some(y)) => (y, x),

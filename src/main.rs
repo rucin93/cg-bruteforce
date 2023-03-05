@@ -57,7 +57,8 @@ fn main() {
                 '2' => acc + 10,
                 '*' => acc + 7,
                 '~' => acc + 2,
-                '(' | ')' | 'x' => acc + 1,
+                'x' => acc + 2,
+                '(' | ')' => acc + 1,
                 _ => acc,
             });
             (s.to_string(), diff)
@@ -71,7 +72,7 @@ fn main() {
         if done.contains(&s) {
             continue;
         }
-        let count = s.matches("2").count();
+        let count = s.len();
         db_chunks[count].push(s);
     }
 
@@ -116,22 +117,25 @@ fn main() {
                     println!("{:?} - pattern: {}", thread_id, pattern);
                     for code in pattern_to_equation(&pattern).iter() {
                         let ev = evaluate(code);
-                        if !ev.0.is_empty() {
-                            let message = format!("{} {}\n", ev.0, ev.1);
-                            if !unique_keys.lock().unwrap().contains(&ev.0.clone()) {
-                                unique_keys.lock().unwrap().insert(ev.0.clone());
-                                tx.send(ev).unwrap();
+                        for res in ev {
+                            if !res.0.is_empty() {
+                                let message = format!("{} {}\n", res.0, res.1);
 
-                                let mut file = OpenOptions::new()
-                                    .append(true)
-                                    .open("found.txt")
-                                    .expect("Unable to open file");
-
-                                file.write_all(message.as_bytes())
-                                    .expect("Unable to write data");
+                                if !unique_keys.lock().unwrap().insert(res.0.clone()) {
+                                    unique_keys.lock().unwrap().insert(res.0.clone());
+                                    tx.send(res).unwrap();
+        
+                                    let mut file = OpenOptions::new()
+                                        .append(true)
+                                        .open("found.txt")
+                                        .expect("Unable to open file");
+        
+                                    file.write_all(message.as_bytes())
+                                            .expect("Unable to write data");
+                                }
+    
+                                println!("{}", &message);
                             }
-
-                            println!("{}", &message);
                         }
                     }
 
