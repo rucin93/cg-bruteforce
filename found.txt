@@ -1,2 +1,0 @@
-evil for(i=j=0;i<50;i++)((j^i)%3)||print(j=i)
-odious for(j=i=1;i<50;i++)((j^i)%3)&&print(j=i)
