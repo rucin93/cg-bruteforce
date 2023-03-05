@@ -5,7 +5,7 @@ use std::{
     io::{self, BufRead, Write},
     path::Path,
     sync::Arc,
-    time::Instant,
+    time::Instant, collections::HashMap,
 };
 
 use evaluate::{evaluate, pattern_to_equation};
@@ -40,6 +40,20 @@ fn main() {
             }
         }
     }
+
+    let mut found = HashMap::new();
+
+    if let Ok(lines) = read_lines("found.txt") {
+        for line in lines {
+            if let Ok(pattern) = line {
+                let mut pattern = pattern.split(" ");
+                let pattern = (pattern.next().unwrap().to_string(), pattern.next().unwrap().to_string());
+                found.insert(pattern.0, pattern.1);
+            }
+        }
+    }
+
+    println!("Found: {:?}", found);
 
     let map: Vec<String> = db.clone().into_iter().collect();
     // let mut db_chunks: Vec<Vec<String>> = vec![vec![]; 40];
@@ -96,8 +110,8 @@ fn main() {
         .unwrap();
     let evaluate_time = Instant::now();
     let (tx, rx) = std::sync::mpsc::channel();
-    let unique_keys: Arc<std::sync::Mutex<std::collections::HashSet<String>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
+    let unique_keys: Arc<std::sync::Mutex<std::collections::HashMap<String, String>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(found));
     for map in db_chunks {
         let mut chunks = map.chunks(1);
         if map.len() >= threads {
@@ -119,21 +133,30 @@ fn main() {
                         let ev = evaluate(code);
                         for res in ev {
                             if !res.0.is_empty() {
-                                let message = format!("{} {}\n", res.0, res.1);
+                                let message = format!("{} {}\n", res.0.clone(), res.1.clone());
+                                // find if unique_keys contains res.0 and if value length is less then res.1 or null insert res.1 and save to file
 
-                                if !unique_keys.lock().unwrap().insert(res.0.clone()) {
-                                    unique_keys.lock().unwrap().insert(res.0.clone());
-                                    tx.send(res).unwrap();
-        
-                                    let mut file = OpenOptions::new()
-                                        .append(true)
-                                        .open("found.txt")
-                                        .expect("Unable to open file");
-        
-                                    file.write_all(message.as_bytes())
-                                            .expect("Unable to write data");
+                                let cloned = res.clone();
+                                unique_keys.lock().unwrap().entry(res.0.clone()).and_modify(|e| {
+                                    if e.len() > res.1.clone().len() {
+                                        *e = res.1.clone();
+                                    }
+                                }).or_insert(cloned.1.clone());
+
+                                tx.send(res).unwrap();
+                                // clear file found.txt
+ 
+                                // write unique_keys to file
+                                let mut file = OpenOptions::new()
+                                    .write(true)
+                                    .open("found.txt")
+                                    .expect("Unable to open file");
+                                
+                                for (key, value) in unique_keys.lock().unwrap().iter() {
+                                    file.write_all(format!("{} {}\n", key, value).as_bytes())
+                                        .expect("Unable to write data");
                                 }
-    
+
                                 println!("{}", &message);
                             }
                         }
